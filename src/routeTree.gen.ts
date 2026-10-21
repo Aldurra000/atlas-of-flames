@@ -10,13 +10,20 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CountryRouteImport } from './routes/country'
 import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as WarningRouteImport } from './routes/warning'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CountryRoute = CountryRouteImport.update({
+  id: '/country',
+  path: '/country',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExplorerRoute = ExplorerRouteImport.update({
@@ -29,6 +36,11 @@ const HistoryRoute = HistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WarningRoute = WarningRouteImport.update({
   id: '/warning',
   path: '/warning',
@@ -37,35 +49,51 @@ const WarningRoute = WarningRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/country': typeof CountryRoute
   '/explorer': typeof ExplorerRoute
   '/history': typeof HistoryRoute
+  '/methodology': typeof MethodologyRoute
   '/warning': typeof WarningRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/country': typeof CountryRoute
   '/explorer': typeof ExplorerRoute
   '/history': typeof HistoryRoute
+  '/methodology': typeof MethodologyRoute
   '/warning': typeof WarningRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/country': typeof CountryRoute
   '/explorer': typeof ExplorerRoute
   '/history': typeof HistoryRoute
+  '/methodology': typeof MethodologyRoute
   '/warning': typeof WarningRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/explorer' | '/history' | '/warning'
+  fullPaths:
+    '/' | '/country' | '/explorer' | '/history' | '/methodology' | '/warning'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explorer' | '/history' | '/warning'
-  id: '__root__' | '/' | '/explorer' | '/history' | '/warning'
+  to: '/' | '/country' | '/explorer' | '/history' | '/methodology' | '/warning'
+  id:
+    | '__root__'
+    | '/'
+    | '/country'
+    | '/explorer'
+    | '/history'
+    | '/methodology'
+    | '/warning'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CountryRoute: typeof CountryRoute
   ExplorerRoute: typeof ExplorerRoute
   HistoryRoute: typeof HistoryRoute
+  MethodologyRoute: typeof MethodologyRoute
   WarningRoute: typeof WarningRoute
 }
 
@@ -76,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/country': {
+      id: '/country'
+      path: '/country'
+      fullPath: '/country'
+      preLoaderRoute: typeof CountryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explorer': {
@@ -92,6 +127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/warning': {
       id: '/warning'
       path: '/warning'
@@ -104,8 +146,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CountryRoute: CountryRoute,
   ExplorerRoute: ExplorerRoute,
   HistoryRoute: HistoryRoute,
+  MethodologyRoute: MethodologyRoute,
   WarningRoute: WarningRoute,
 }
 export const routeTree = rootRouteImport
