@@ -59,7 +59,7 @@ function Atmosphere() {
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.0); vN=normalize(normalMatrix*normal); vV=normalize(-mv.xyz); gl_Position=projectionMatrix*mv; }`,
-        fragmentShader: `varying vec3 vN; varying vec3 vV; void main(){ float i = pow(0.72 - dot(vN, vV), 3.0); gl_FragColor = vec4(0.35,0.55,1.0,1.0)*i*1.4; }`,
+        fragmentShader: `varying vec3 vN; varying vec3 vV; void main(){ float i = pow(max(0.0, 0.62 - dot(vN, vV)), 4.0); gl_FragColor = vec4(0.3,0.5,1.0,1.0)*i*2.2; }`,
       }),
     [],
   );
