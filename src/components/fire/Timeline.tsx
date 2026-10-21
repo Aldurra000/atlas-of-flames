@@ -23,7 +23,7 @@ export function Timeline() {
       const ds = s.data?.ds.dates ?? [];
       const i = s.selectedDate ? ds.indexOf(s.selectedDate) : -1;
       if (i < 0 || i >= ds.length - 1) s.set({ playing: false });
-      else s.set({ selectedDate: ds[i + 1] });
+      else s.set({ selectedDate: ds[i + 1] ?? null });
     }, 900 / speed);
     return () => clearInterval(t);
   }, [playing, speed]);
@@ -37,7 +37,7 @@ export function Timeline() {
   const inWin = useMemo(() => new Set(date ? windowDates(date, W) : []), [date, W]);
 
   if (!data || !date) return <div className="h-28 animate-pulse rounded-lg border border-border bg-card" />;
-  const go = (i: number) => set({ selectedDate: dates[Math.max(0, Math.min(dates.length - 1, i))] });
+  const go = (i: number) => set({ selectedDate: dates[Math.max(0, Math.min(dates.length - 1, i))] ?? null });
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 sm:p-4">

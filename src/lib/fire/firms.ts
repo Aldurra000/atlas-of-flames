@@ -21,13 +21,13 @@ const num = (v: string | undefined) => {
 export function parseFirmsCsv(text: string, source: LiveSource): Detection[] {
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 1) return [];
-  const header = lines[0].split(",").map((h) => h.trim());
+  const header = lines[0]!.split(",").map((h) => h.trim());
   if (!header.includes("latitude") || !header.includes("longitude")) {
     throw new Error("Unexpected FIRMS response format");
   }
   const out: Detection[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(",");
+    const cols = lines[i]!.split(",");
     if (cols.length < header.length) continue;
     const raw: Record<string, string> = {};
     header.forEach((h, j) => (raw[h] = cols[j]?.trim() ?? ""));

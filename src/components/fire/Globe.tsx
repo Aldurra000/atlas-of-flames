@@ -73,15 +73,16 @@ function Atmosphere() {
 
 function linesFromGeometry(geom: { type: string; coordinates: unknown }, r: number) {
   const pts: number[] = [];
-  const addLine = (line: number[][]) => {
+  const addLine = (line: [number, number][]) => {
     for (let i = 0; i < line.length - 1; i++) {
-      pts.push(...latLonToXYZ(line[i][1], line[i][0], r), ...latLonToXYZ(line[i + 1][1], line[i + 1][0], r));
+      const a = line[i]!, b = line[i + 1]!;
+      pts.push(...latLonToXYZ(a[1], a[0], r), ...latLonToXYZ(b[1], b[0], r));
     }
   };
   const c = geom.coordinates as never;
-  if (geom.type === "MultiLineString") (c as number[][][]).forEach(addLine);
-  if (geom.type === "Polygon") (c as number[][][]).forEach(addLine);
-  if (geom.type === "MultiPolygon") (c as number[][][][]).forEach((p) => p.forEach(addLine));
+  if (geom.type === "MultiLineString") (c as [number, number][][]).forEach(addLine);
+  if (geom.type === "Polygon") (c as [number, number][][]).forEach(addLine);
+  if (geom.type === "MultiPolygon") (c as [number, number][][][]).forEach((p) => p.forEach(addLine));
   const g = new THREE.BufferGeometry();
   g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
   return g;
@@ -200,7 +201,7 @@ function Flames({ items }: { items: Item[] }) {
   return (
     <>
       {[glow, outer, core].map((mat, i) => (
-        <instancedMesh key={`${i}-${items.length}`} ref={refs[i]} args={[geom, mat, items.length]} raycast={() => null} frustumCulled={false} />
+        <instancedMesh key={`${i}-${items.length}`} ref={refs[i]!} args={[geom, mat, items.length]} raycast={() => null} frustumCulled={false} />
       ))}
     </>
   );
