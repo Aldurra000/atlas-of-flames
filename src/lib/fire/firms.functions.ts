@@ -27,11 +27,9 @@ export const fetchFirms = createServerFn({ method: "POST" })
 
     const start = addDays(data.endDate, -(data.days - 1));
     const area = REGION_PRESETS[data.region]!.area;
-    const chunks: { start: string; days: number }[] = [];
-    for (let s = start; s <= data.endDate; s = addDays(s, 5)) {
-      const remaining = dateRange(s, data.endDate).length;
-      chunks.push({ start: s, days: Math.min(5, remaining) });
-    }
+    // One request per day so a busy day can never crowd a later day out of the row cap.
+    const chunks = dateRange(start, data.endDate).map((s) => ({ start: s, days: 1 }));
+    const perDayCap = Math.floor(MAX_ROWS / chunks.length);
 
     const records = [] as ReturnType<typeof parseFirmsCsv>;
     const missing: string[] = [];
@@ -54,13 +52,12 @@ export const fetchFirms = createServerFn({ method: "POST" })
           continue;
         }
         const parsed = parseFirmsCsv(text, data.source);
-        for (const r of parsed) {
-          if (records.length >= MAX_ROWS) {
-            truncated = true;
-            break;
-          }
-          records.push(r);
+        if (parsed.length > perDayCap) {
+          truncated = true;
+          notes.push(`${c.start}: NASA returned ${parsed.length.toLocaleString()} detections; showing the ${perDayCap.toLocaleString()} with highest FRP. Counts for this day are a lower bound.`);
+          parsed.sort((a, b) => (b.frp ?? 0) - (a.frp ?? 0));
         }
+        for (const r of parsed.slice(0, perDayCap)) records.push(r);
       } catch (e) {
         console.error("FIRMS fetch failed", redact(e instanceof Error ? e.message : String(e), key));
         notes.push(`Network error retrieving ${c.start} (+${c.days}d).`);
