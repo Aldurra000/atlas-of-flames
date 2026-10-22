@@ -67,6 +67,10 @@ export const fetchFirms = createServerFn({ method: "POST" })
         missing.push(...chunkDates);
       }
     }
+    // If no date could be retrieved, this is a failure — never present it as "live, zero detections".
+    if (missing.length >= dateRange(start, data.endDate).length) {
+      return { ok: false as const, error: `No FIRMS observations could be retrieved. ${notes.join(" ")}`.trim() };
+    }
     if (truncated) notes.push(`Response capped at ${MAX_ROWS.toLocaleString()} detections. Choose a smaller region or window for complete coverage.`);
     if (data.source.endsWith("_NRT")) notes.push("NRT products cover roughly the last 2 months; the most recent day may still be filling in.");
     return {
