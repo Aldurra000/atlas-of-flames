@@ -23,7 +23,7 @@ describe("NASA response honesty", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Unexpected failure");
     expect(result.returnedRecordCount).toBe(20001);
-    expect(result.records).toHaveLength(20001);
+    expect(result.loadedRecordCount).toBe(20001);
     expect(result.truncated).toBe(false);
   });
   it("distinguishes successful zero detections from unavailable observations", async () => {
@@ -32,7 +32,7 @@ describe("NASA response honesty", () => {
     const result = await fetchFirms({ data: request });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Unexpected failure");
-    expect(result.records).toHaveLength(0);
+    expect(result.loadedRecordCount).toBe(0);
     expect(result.missingDates).toEqual([]);
   });
   it.each([401, 429, 500])("reports NASA HTTP %i as unavailable, not zero", async (status) => {
@@ -51,6 +51,6 @@ describe("NASA response honesty", () => {
     log.mockRestore();
   });
   it("rejects more than 10 requested days", async () => {
-    await expect(fetchFirms({ data: { ...request, days: 11 } })).rejects.toThrow();
+    expect(() => fetchFirms({ data: { ...request, days: 11 } })).toThrow();
   });
 });

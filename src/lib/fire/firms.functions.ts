@@ -30,7 +30,8 @@ export const fetchFirms = createServerFn({ method: "POST" })
     // Retrieve each complete day; never select a highest-FRP sample for statistics.
     const chunks = dateRange(start, data.endDate).map((s) => ({ start: s, days: 1 }));
 
-    const records = [] as ReturnType<typeof parseFirmsCsv>;
+    const csvChunks: string[] = [];
+    let loadedRecordCount = 0;
     const missing: string[] = [];
     const notes: string[] = [];
     let returnedRecordCount = 0;
@@ -56,7 +57,8 @@ export const fetchFirms = createServerFn({ method: "POST" })
         returnedRecordCount += returned;
         dailyCounts[c.start] = { returned, loaded: parsed.length };
         if (returned !== parsed.length) notes.push(`${c.start}: ${returned - parsed.length} malformed rows excluded; counts are incomplete.`);
-        for (const r of parsed) records.push(r);
+        loadedRecordCount += parsed.length;
+        csvChunks.push(text);
       } catch (e) {
         console.error("FIRMS fetch failed", redact(e instanceof Error ? e.message : String(e), key));
         notes.push(`Network error retrieving ${c.start} (+${c.days}d).`);
@@ -67,11 +69,12 @@ export const fetchFirms = createServerFn({ method: "POST" })
     if (missing.length >= dateRange(start, data.endDate).length) {
       return { ok: false as const, error: `No FIRMS observations could be retrieved. ${notes.join(" ")}`.trim() };
     }
-    const truncated = returnedRecordCount !== records.length;
+    const truncated = returnedRecordCount !== loadedRecordCount;
     if (data.source.endsWith("_NRT")) notes.push("NRT products cover roughly the last 2 months; the most recent day may still be filling in.");
     return {
       ok: true as const,
-      records,
+      csvChunks,
+      loadedRecordCount,
       returnedRecordCount,
       dailyCounts,
       dates: dateRange(start, data.endDate),
