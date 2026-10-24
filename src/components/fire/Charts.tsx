@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { useFire, scopeKey, type Prepared } from "@/lib/fire/store";
+import { useFire, useFilteredData, analyticsAvailability, scopeKey, type Prepared } from "@/lib/fire/store";
 import { computeAnomaly, windowDates } from "@/lib/fire/analytics";
 import { fmtShort, isoWeekKey, toUtc } from "@/lib/fire/dates";
 import { cn } from "@/lib/utils";
@@ -33,11 +33,13 @@ export function series(data: Prepared, scope: string, g: Gran) {
 }
 
 export function ActivityChart({ scope, gran, height = 220 }: { scope: string; gran: Gran; height?: number }) {
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const set = useFire((s) => s.set);
+  const W = useFire((s) => s.windowDays);
   const rows = useMemo(() => (data ? series(data, scope, gran) : []), [data, scope, gran]);
   if (!data) return null;
+  if (gran === "seasonal" && (data.available.size < 365 || data.ds.truncated)) return <p className="text-xs text-muted-foreground">Insufficient history for annual seasonality: at least 365 complete retrieved days required. No long-term forecast is produced.</p>;
   return (
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -52,6 +54,7 @@ export function ActivityChart({ scope, gran, height = 220 }: { scope: string; gr
           <Bar dataKey="value" fill="var(--fire)" radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      <p className="text-[11px] text-muted-foreground">{data.ds.truncated ? "Incomplete loaded records · counts are lower bounds. " : ""}Trend spans loaded history; selected window ends {date} ({W} day(s)). {gran === "seasonal" ? "Pooled mean by calendar month, not multi-year seasonality." : ""}</p>
     </div>
   );
 }
@@ -70,7 +73,7 @@ export function GranTabs({ value, onChange }: { value: Gran; onChange: (g: Gran)
 
 /** Calendar matrix: weeks × weekdays. Grey hatch = no observations available, dark = zero detections. */
 export function CalendarMatrix({ scope }: { scope: string }) {
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const set = useFire((s) => s.set);
@@ -132,9 +135,10 @@ export function CalendarMatrix({ scope }: { scope: string }) {
 
 /** Repeated elevated periods: sliding the anomaly test across the record. */
 export function useElevatedPeriods(country: string | null) {
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const W = useFire((s) => s.windowDays);
   const cfg = useFire((s) => s.anomaly);
+  const date = useFire((s) => s.selectedDate);
   return useMemo(() => {
     if (!data) return [];
     const w = Math.max(W, 7);
@@ -142,9 +146,10 @@ export function useElevatedPeriods(country: string | null) {
     const out: { end: string; obs: number; mean: number; z: number }[] = [];
     for (let i = data.ds.dates.length - 1; i >= 0; i -= w) {
       const end = data.ds.dates[i]!;
-      const a = computeAnomaly(daily, data.available, end, w, cfg);
+      if (date && end > date) continue;
+      const a = computeAnomaly(daily, analyticsAvailability(data), end, w, cfg);
       if ((a.status === "elevated" || a.status === "strong") && a.baselineMean != null && a.z != null) out.push({ end, obs: a.observed, mean: a.baselineMean, z: a.z });
     }
     return out;
-  }, [data, W, cfg, country]);
+  }, [data, W, cfg, country, date]);
 }

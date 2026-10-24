@@ -6,6 +6,8 @@ import { MetricsBar, Ranking, useAnomalyFlags } from "@/components/fire/Metrics"
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "FIRECHRONICLE — Global Fire Overview" },
       { name: "description", content: "Interactive 3D Earth of satellite active-fire detections with timeline, rankings and anomaly flags." },
       { property: "og:title", content: "FIRECHRONICLE — Global Fire Overview" },

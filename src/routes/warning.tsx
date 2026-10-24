@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { useFire, useWindowData } from "@/lib/fire/store";
+import { useFire, useWindowData, useFilteredData, analyticsAvailability } from "@/lib/fire/store";
 import { computePriorities } from "@/lib/fire/analytics";
 import { SOURCE_LABELS } from "@/lib/fire/types";
 import { fmtDate } from "@/lib/fire/dates";
@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/warning")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Early Warning & Monitoring Priorities — FIRECHRONICLE" },
       { name: "description", content: "Transparent monitoring priority assessment from observed detections and historical baselines." },
       { property: "og:title", content: "Early Warning — FIRECHRONICLE" },
@@ -21,24 +23,25 @@ export const Route = createFileRoute("/warning")({
 });
 
 export function usePriorities() {
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const cfg = useFire((s) => s.anomaly);
-  return useMemo(() => (data && date ? computePriorities(data.idx, data.available, date, W, cfg) : []), [data, date, W, cfg]);
+  return useMemo(() => (data && date ? computePriorities(data.idx, analyticsAvailability(data), date, W, cfg) : []), [data, date, W, cfg]);
 }
 
 const LEVEL = { High: "text-destructive border-destructive/50", Medium: "text-[var(--amber)] border-[var(--amber)]/50", Low: "text-muted-foreground border-border" };
 
 function Warning() {
   const pr = usePriorities();
-  const win = useWindowData({ ignoreCountry: true });
-  const data = useFire((s) => s.data);
+  const win = useWindowData();
+  const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const country = useFire((s) => s.country);
-  const list = (country ? pr.filter((p) => p.country === country) : pr).slice(0, 12);
-  const unusual = pr.filter((p) => p.anomaly.status === "elevated" || p.anomaly.status === "strong");
+  const scoped = country ? pr.filter((p) => p.country === country) : pr;
+  const list = scoped.slice(0, 12);
+  const unusual = scoped.filter((p) => p.anomaly.status === "elevated" || p.anomaly.status === "strong");
   const period = date ? `${fmtDate(windowDates(date, W)[0]!)} – ${fmtDate(date)}` : "";
   return (
     <div className="space-y-4">
@@ -50,11 +53,11 @@ function Warning() {
       </div>
       <Timeline />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Cat n={1} title="Confirmed satellite observations" status="available">
-          {win?.records.length.toLocaleString()} detections across {[...(win?.byCountry.keys() ?? [])].length} regions, {period}.
+        <Cat n={1} title={data?.ds.kind === "demo" ? "Synthetic demonstration observations" : "Confirmed satellite observations"} status={!data || !win?.avail.length ? "unavailable" : data.ds.kind === "demo" ? "demo" : data.ds.truncated || win.missing.length ? "partial" : "available"}>
+          {win?.avail.length ? `${win.records.length.toLocaleString()} filtered loaded detections across ${win.byCountry.size} regions, ${period}.` : "No observations available for the selected window."}
         </Cat>
-        <Cat n={2} title="Statistically unusual activity" status={unusual.length || !pr.every((p) => p.anomaly.status === "insufficient") ? "available" : "limited"}>
-          {pr.length && pr.every((p) => p.anomaly.status === "insufficient") ? "Insufficient historical data for baseline comparison." : `${unusual.length} region(s) above the trailing baseline.`}
+        <Cat n={2} title="Statistically unusual activity" status={unusual.length || !list.every((p) => p.anomaly.status === "insufficient") ? "available" : "limited"}>
+          {(!list.length || list.every((p) => p.anomaly.status === "insufficient")) ? "Insufficient historical data for baseline comparison." : `${unusual.length} region(s) above the trailing baseline.`}
         </Cat>
         <Cat n={3} title="Estimated potential risk" status="not integrated">
           Requires weather, fuel-moisture or drought datasets, which are not integrated. No risk estimate is produced.
@@ -67,7 +70,7 @@ function Warning() {
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">Monitoring priorities {country ? `— ${country}` : ""}</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          score = 0.4 × recent activity (log-scaled to the most active region) + 0.3 × persistence (share of observed days with detections) + 0.3 × anomaly (z/4, capped at 1; 0 when the baseline is insufficient). High ≥ 0.60, Medium ≥ 0.35.
+          score = 0.4 × recent activity (log-scaled to the most active region) + 0.3 × persistence (share of observed days with detections) + 0.3 × anomaly (z/4, capped at 1; 0 when the baseline is insufficient). High ≥ 0.60, Medium ≥ 0.35. Relative monitoring rank, not a risk probability; showing up to 12 areas.
         </p>
         <div className="grid gap-3 lg:grid-cols-2">
           {list.map((p) => (
@@ -88,7 +91,7 @@ function Warning() {
               </dl>
               <p className="mt-2 text-xs"><span className="text-muted-foreground">Why: </span>{p.reasons.join("; ")}.</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Components R {p.components.recent.toFixed(2)} · P {p.components.persistence.toFixed(2)} · A {p.components.anomaly.toFixed(2)} · Source {data ? SOURCE_LABELS[data.ds.source] : ""} · coverage {Math.round(p.anomaly.coverage * 100)}%
+                Components R {p.components.recent.toFixed(2)} · P {p.components.persistence.toFixed(2)} · A {p.components.anomaly.toFixed(2)} · Source {data ? SOURCE_LABELS[data.ds.source] : ""} · retrieved-day availability {Math.round(p.anomaly.coverage * 100)}%
               </p>
               <p className="mt-2 rounded bg-muted px-2 py-1 text-xs">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Informational suggestion · </span>
@@ -96,7 +99,7 @@ function Warning() {
               </p>
             </article>
           ))}
-          {!list.length && <p className="text-sm text-muted-foreground">No regions with detections in this window.</p>}
+          {!list.length && <p className="text-sm text-muted-foreground">{win?.avail.length ? "No matching detections on retrieved days." : "Observations unavailable in this window."}</p>}
         </div>
       </section>
     </div>

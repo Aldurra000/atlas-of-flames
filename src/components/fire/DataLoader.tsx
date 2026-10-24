@@ -4,7 +4,9 @@ import { useFire } from "@/lib/fire/store";
 import { generateDemoDataset } from "@/lib/fire/demo";
 import { fetchFirms, getFirmsStatus } from "@/lib/fire/firms.functions";
 import { countryAt } from "@/lib/fire/geo";
-import { todayUtc } from "@/lib/fire/dates";
+import { addDays, dateRange, todayUtc } from "@/lib/fire/dates";
+import { parseFirmsCsv } from "@/lib/fire/firms";
+import type { Detection } from "@/lib/fire/types";
 
 /** Loads the active dataset (demo or live FIRMS) into the shared store. Never mixes the two. */
 export function DataLoader() {
@@ -27,27 +29,56 @@ export function DataLoader() {
       setTimeout(() => !cancelled && useFire.getState().setDataset(generateDemoDataset(todayUtc())), 0);
       return () => void (cancelled = true);
     }
-    fetchLive({ data: { source: live.source, region: live.region, endDate: live.endDate ?? todayUtc(), days: live.days } })
-      .then((r) => {
+    const load = async () => {
+      const end = live.endDate ?? todayUtc();
+      const dates = dateRange(addDays(end, -(live.days - 1)), end);
+      const records: Detection[] = [];
+      const missingDates: string[] = [];
+      const notes: string[] = [];
+      const dailyCounts: Record<string, { returned: number; loaded: number }> = {};
+      let returnedRecordCount = 0;
+      let truncated = false;
+      let fetchedAt = "";
+      for (const date of dates) {
+        const r = await fetchLive({ data: { source: live.source, region: live.region, endDate: date, days: 1 } });
         if (cancelled) return;
         if (!r.ok) {
-          useFire.getState().set({ status: "error", error: r.error });
-          return;
+          missingDates.push(date);
+          notes.push(r.error);
+          continue;
         }
-        for (const rec of r.records) rec.country = countryAt(rec.lat, rec.lon);
-        useFire.getState().setDataset({
+        for (const csv of r.csvChunks) {
+          for (const rec of parseFirmsCsv(csv, live.source)) {
+            rec.country = countryAt(rec.lat, rec.lon);
+            records.push(rec);
+          }
+        }
+        returnedRecordCount += r.returnedRecordCount;
+        Object.assign(dailyCounts, r.dailyCounts);
+        notes.push(...r.notes);
+        truncated ||= r.truncated;
+        fetchedAt = r.fetchedAt;
+      }
+      if (cancelled) return;
+      if (missingDates.length === dates.length) {
+        useFire.getState().set({ status: "error", error: notes.join(" ") || "NASA observations unavailable." });
+        return;
+      }
+      useFire.getState().setDataset({
           kind: "live",
           source: live.source,
           region: live.region,
-          records: r.records,
-          dates: r.dates,
-          missingDates: r.missingDates,
-          fetchedAt: r.fetchedAt,
-          truncated: r.truncated,
-          notes: r.notes,
+          records,
+          returnedRecordCount,
+          dailyCounts,
+          dates,
+          missingDates,
+          fetchedAt,
+          truncated,
+          notes: [...new Set(notes)],
         });
-      })
-      .catch(() => !cancelled && useFire.getState().set({ status: "error", error: "Could not reach the FIRMS proxy. No observations are shown." }));
+    };
+    load().catch(() => !cancelled && useFire.getState().set({ status: "error", error: "Could not reach the FIRMS proxy. No observations are shown." }));
     return () => void (cancelled = true);
   }, [mode, live, fetchLive]);
 

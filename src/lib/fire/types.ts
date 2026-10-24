@@ -71,6 +71,9 @@ export interface Dataset {
   /** dates in range for which no observations could be obtained (not the same as zero detections) */
   missingDates: string[];
   fetchedAt: string;
+  /** CSV data rows returned on successfully retrieved dates, before validation. */
+  returnedRecordCount?: number;
+  dailyCounts?: Record<string, { returned: number; loaded: number }>;
   truncated: boolean;
   notes: string[];
 }

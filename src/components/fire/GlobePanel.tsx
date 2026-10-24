@@ -1,7 +1,7 @@
 import { ClientOnly } from "@tanstack/react-router";
 import { lazy, Suspense } from "react";
 import { Crosshair, Pause, Play, RotateCcw } from "lucide-react";
-import { useFire, type Viz } from "@/lib/fire/store";
+import { useFire, useWindowData, type Viz } from "@/lib/fire/store";
 import { cn } from "@/lib/utils";
 
 const Globe = lazy(() => import("./Globe"));
@@ -25,6 +25,7 @@ export function GlobePanel({ className }: { className?: string }) {
   const autoRotate = useFire((s) => s.autoRotate);
   const country = useFire((s) => s.country);
   const set = useFire((s) => s.set);
+  const win = useWindowData();
   const fallback = <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Initializing globe…</div>;
   return (
     <div className={cn("relative overflow-hidden rounded-lg border border-border bg-[var(--space)]", className)}>
@@ -61,7 +62,7 @@ export function GlobePanel({ className }: { className?: string }) {
 
       <div className="pointer-events-none absolute bottom-3 left-3 max-w-[16rem] rounded-md border border-border bg-background/80 p-3 text-[11px] leading-relaxed backdrop-blur">
         <div className="mb-1.5 flex items-center gap-2 font-mono uppercase tracking-wider text-muted-foreground">
-          <Crosshair className="h-3 w-3" /> {BUCKET_LABEL[bucket][viz]}
+          <Crosshair className="h-3 w-3" /> {viz === "flames" && bucket === "near" && (win?.records.length ?? 0) > 20000 ? "Aggregated · 0.1° cells · all records" : BUCKET_LABEL[bucket][viz]}
         </div>
         <div className="mb-1.5 h-1.5 w-full rounded-full bg-[image:var(--gradient-fire)]" />
         <div className="flex justify-between text-muted-foreground">

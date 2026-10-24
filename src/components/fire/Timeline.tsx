@@ -1,13 +1,14 @@
 import { useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { useFire } from "@/lib/fire/store";
-import { ALL, windowDates } from "@/lib/fire/analytics";
+import { useFire, useFilteredData, scopeKey } from "@/lib/fire/store";
+import { windowDates } from "@/lib/fire/analytics";
 import { fmtDate } from "@/lib/fire/dates";
 import { cn } from "@/lib/utils";
 
 export function Timeline() {
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
+  const country = useFire((s) => s.country);
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const playing = useFire((s) => s.playing);
@@ -30,9 +31,9 @@ export function Timeline() {
 
   const bars = useMemo(() => {
     if (!data) return [];
-    const all = data.idx.get(ALL);
+    const all = data.idx.get(scopeKey(country));
     return dates.map((d) => ({ d, n: all?.get(d) ?? 0, missing: data.missing.has(d) }));
-  }, [data, dates]);
+  }, [data, dates, country]);
   const max = Math.max(1, ...bars.map((b) => b.n));
   const inWin = useMemo(() => new Set(date ? windowDates(date, W) : []), [date, W]);
 
