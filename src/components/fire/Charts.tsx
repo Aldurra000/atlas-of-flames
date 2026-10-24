@@ -36,9 +36,10 @@ export function ActivityChart({ scope, gran, height = 220 }: { scope: string; gr
   const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const set = useFire((s) => s.set);
+  const W = useFire((s) => s.windowDays);
   const rows = useMemo(() => (data ? series(data, scope, gran) : []), [data, scope, gran]);
   if (!data) return null;
-  if (gran === "seasonal" && data.available.size < 365) return <p className="text-xs text-muted-foreground">Insufficient history for annual seasonality: fewer than 365 retrieved days. No long-term forecast is produced.</p>;
+  if (gran === "seasonal" && (data.available.size < 365 || data.ds.truncated)) return <p className="text-xs text-muted-foreground">Insufficient history for annual seasonality: at least 365 complete retrieved days required. No long-term forecast is produced.</p>;
   return (
     <div style={{ height }}>
       <ResponsiveContainer width="100%" height="100%">
@@ -53,6 +54,7 @@ export function ActivityChart({ scope, gran, height = 220 }: { scope: string; gr
           <Bar dataKey="value" fill="var(--fire)" radius={[2, 2, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+      <p className="text-[11px] text-muted-foreground">{data.ds.truncated ? "Incomplete loaded records · counts are lower bounds. " : ""}Trend spans loaded history; selected window ends {date} ({W} day(s)). {gran === "seasonal" ? "Pooled mean by calendar month, not multi-year seasonality." : ""}</p>
     </div>
   );
 }

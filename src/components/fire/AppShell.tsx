@@ -138,7 +138,7 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
       </div>
       {s.liveConfigured === false ? (
         <p className="text-muted-foreground">
-          Live mode needs a NASA FIRMS MAP_KEY stored server-side as <code className="text-foreground">FIRMS_MAP_KEY</code>. Get one free at firms.modaps.eosdis.nasa.gov/api/map_key. Until then, only clearly labeled synthetic demo records are shown.
+          Live observations are unavailable until a NASA FIRMS key is configured. Demo observations appear only when Demo is explicitly selected.
         </p>
       ) : (
         <div className="flex flex-wrap items-end gap-2">

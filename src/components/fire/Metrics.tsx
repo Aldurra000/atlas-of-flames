@@ -64,7 +64,7 @@ export function MetricsBar() {
       <Metric
         label="Highest activity"
         value={<span className="text-lg">{top?.[0] ?? "—"}</span>}
-        sub={top ? `${top[1].toLocaleString()} detections` : "no detections"}
+        sub={top ? `${top[1].toLocaleString()} loaded detections` : win.avail.length ? "no matching detections" : "observations unavailable"}
         tip="Country with the most detections in the selected window. Raw counts are influenced by country area, satellite overpass geometry and cloud cover."
       />
       <Metric

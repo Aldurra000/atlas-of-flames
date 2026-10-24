@@ -35,6 +35,25 @@ describe("NASA response honesty", () => {
     expect(result.loadedRecordCount).toBe(0);
     expect(result.missingDates).toEqual([]);
   });
+  it("marks a failed date missing while preserving successfully retrieved days", async () => {
+    vi.stubEnv("FIRMS_MAP_KEY", "test-only-key");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(new Response(header + "\n-10,20,2026-10-22,1200,5,n,D")).mockResolvedValueOnce(new Response("Rejected", { status: 500 })));
+    const result = await fetchFirms({ data: { ...request, days: 2 } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Unexpected failure");
+    expect(result.missingDates).toEqual(["2026-10-23"]);
+    expect(result.loadedRecordCount).toBe(1);
+  });
+  it("separates malformed NASA rows from validated loaded counts", async () => {
+    vi.stubEnv("FIRMS_MAP_KEY", "test-only-key");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(header + "\n-10,20,2026-10-23,1200,5,n,D\n200,20,2026-10-23,1200,5,n,D")));
+    const result = await fetchFirms({ data: request });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Unexpected failure");
+    expect(result.returnedRecordCount).toBe(2);
+    expect(result.loadedRecordCount).toBe(1);
+    expect(result.truncated).toBe(true);
+  });
   it.each([401, 429, 500])("reports NASA HTTP %i as unavailable, not zero", async (status) => {
     vi.stubEnv("FIRMS_MAP_KEY", "test-only-key");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Rejected", { status })));

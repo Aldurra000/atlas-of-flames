@@ -39,8 +39,9 @@ function Warning() {
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const country = useFire((s) => s.country);
-  const list = (country ? pr.filter((p) => p.country === country) : pr).slice(0, 12);
-  const unusual = list.filter((p) => p.anomaly.status === "elevated" || p.anomaly.status === "strong");
+  const scoped = country ? pr.filter((p) => p.country === country) : pr;
+  const list = scoped.slice(0, 12);
+  const unusual = scoped.filter((p) => p.anomaly.status === "elevated" || p.anomaly.status === "strong");
   const period = date ? `${fmtDate(windowDates(date, W)[0]!)} – ${fmtDate(date)}` : "";
   return (
     <div className="space-y-4">
@@ -53,7 +54,7 @@ function Warning() {
       <Timeline />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Cat n={1} title={data?.ds.kind === "demo" ? "Synthetic demonstration observations" : "Confirmed satellite observations"} status={!data || !win?.avail.length ? "unavailable" : data.ds.kind === "demo" ? "demo" : data.ds.truncated || win.missing.length ? "partial" : "available"}>
-          {win?.records.length.toLocaleString()} detections across {[...(win?.byCountry.keys() ?? [])].length} regions, {period}.
+          {win?.avail.length ? `${win.records.length.toLocaleString()} filtered loaded detections across ${win.byCountry.size} regions, ${period}.` : "No observations available for the selected window."}
         </Cat>
         <Cat n={2} title="Statistically unusual activity" status={unusual.length || !list.every((p) => p.anomaly.status === "insufficient") ? "available" : "limited"}>
           {(!list.length || list.every((p) => p.anomaly.status === "insufficient")) ? "Insufficient historical data for baseline comparison." : `${unusual.length} region(s) above the trailing baseline.`}
@@ -69,7 +70,7 @@ function Warning() {
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">Monitoring priorities {country ? `— ${country}` : ""}</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          score = 0.4 × recent activity (log-scaled to the most active region) + 0.3 × persistence (share of observed days with detections) + 0.3 × anomaly (z/4, capped at 1; 0 when the baseline is insufficient). High ≥ 0.60, Medium ≥ 0.35.
+          score = 0.4 × recent activity (log-scaled to the most active region) + 0.3 × persistence (share of observed days with detections) + 0.3 × anomaly (z/4, capped at 1; 0 when the baseline is insufficient). High ≥ 0.60, Medium ≥ 0.35. Relative monitoring rank, not a risk probability; showing up to 12 areas.
         </p>
         <div className="grid gap-3 lg:grid-cols-2">
           {list.map((p) => (
