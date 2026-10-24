@@ -303,17 +303,18 @@ function FireLayer() {
     if (b !== useFire.getState().zoomBucket) useFire.getState().set({ zoomBucket: b });
     pickRef.radius = 0.035 * (d - 0.95);
   });
-  const size = CELL_SIZE[viz]![bucket];
   const records = win?.records ?? [];
+  const requestedSize = CELL_SIZE[viz]?.[bucket] ?? 2;
+  const size = !requestedSize && records.length > 20000 ? 0.1 : requestedSize;
   const cells = useMemo(() => (size ? aggregateCells(records, size) : []), [records, size]);
   const flameItems = useMemo<Item[]>(() => {
     if (viz !== "flames") return [];
-    if (!size) return records.slice(0, 20000).map((r) => ({ lat: r.lat, lon: r.lon, size: 0.7 }));
+    if (!size) return records.map((r) => ({ lat: r.lat, lon: r.lon, size: 0.7 }));
     return cells.map((c) => ({ lat: c.lat, lon: c.lon, size: 0.65 + 0.35 * Math.log2(c.count) }));
   }, [viz, size, records, cells]);
   useLayoutEffect(() => {
     pickRef.items = !size
-      ? records.slice(0, 20000).map((r) => ({ lat: r.lat, lon: r.lon, det: r }))
+      ? records.map((r) => ({ lat: r.lat, lon: r.lon, det: r }))
       : viz === "columns"
         ? cells.map((c) => ({ lat: c.lat0 + c.size / 2, lon: c.lon0 + c.size / 2, cell: c }))
         : cells.map((c) => ({ lat: c.lat, lon: c.lon, cell: c }));

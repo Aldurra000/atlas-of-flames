@@ -133,7 +133,8 @@ export function computeAnomaly(
     validWindows: base.length,
     reason: "",
   };
-  const priorDays = [...available].filter((d) => d < windowDates(end, W)[0]).length;
+  const windowStart = addDays(end, -(W - 1));
+  const priorDays = [...available].filter((d) => d < windowStart).length;
   if (priorDays < 28) {
     res.reason = `Insufficient historical data: ${priorDays} preceding observed days; at least 28 are required. Short ranges cannot establish annual seasonality or forecasts.`;
     return res;
