@@ -6,6 +6,7 @@ import { LIVE_SOURCES, SOURCE_LABELS, type LiveSource } from "@/lib/fire/types";
 import { REGION_PRESETS } from "@/lib/fire/firms";
 import { fmtDate, todayUtc } from "@/lib/fire/dates";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { CountrySelect } from "./CountrySelect";
 
 const NAV = [
@@ -52,9 +53,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto hidden md:block">
             <CountrySelect />
           </div>
-          <button className="xl:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
+          <Button variant="ghost" className="xl:hidden" aria-label="Menu" onClick={() => setOpen(!open)}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+          </Button>
         </div>
         {open && (
           <nav className="grid gap-1 border-t border-border px-4 py-2 xl:hidden">
@@ -78,37 +79,40 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function DataStatusBar() {
   const s = useFire();
   const ds = s.data?.ds;
+  const confirmed = s.mode === "live" && ds?.kind === "live" && s.status === "ready";
   const [cfg, setCfg] = useState(false);
   return (
     <div className="border-t border-border/60 bg-card/60">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 font-mono text-[11px] text-muted-foreground">
-        <span className={cn("inline-flex items-center gap-1 font-bold", s.mode === "live" ? "text-[var(--live)]" : "text-[var(--amber)]")}>
-          <Satellite className="h-3 w-3" /> {s.mode === "live" ? "LIVE NASA FIRMS" : "DEMO MODE"}
+        <span className={cn("inline-flex items-center gap-1 font-bold", confirmed ? "text-[var(--live)]" : "text-[var(--amber)]")}>
+          <Satellite className="h-3 w-3" /> {s.mode === "demo" ? "DEMO MODE" : confirmed ? "LIVE NASA FIRMS" : s.status === "error" ? "LIVE UNAVAILABLE" : "AWAITING NASA FIRMS"}
         </span>
         <span>{ds ? SOURCE_LABELS[ds.source] : "—"}</span>
         {ds && <span>{REGION_PRESETS[ds.region]?.label ?? ds.region}</span>}
         {ds && (
           <span>
-            {fmtDate(ds.dates[0]!)} → {fmtDate(ds.dates[ds.dates.length - 1]!)}
+            {fmtDate(ds.dates[0] ?? "")} → {fmtDate(ds.dates.at(-1) ?? "")}
           </span>
         )}
-        {ds && <span>refreshed {new Date(ds.fetchedAt).toISOString().slice(11, 16)} UTC</span>}
-        {ds && <span>{ds.records.length.toLocaleString()} records</span>}
+        {ds && <span>last successful refresh {ds.fetchedAt.replace("T", " ").slice(0, 19)} UTC</span>}
+        {ds && <span>{ds.records.length.toLocaleString()} loaded{ds.kind === "live" ? ` / ${(ds.returnedRecordCount ?? ds.records.length).toLocaleString()} NASA rows returned` : " synthetic records"}</span>}
         {s.status === "loading" && (
           <span className="inline-flex items-center gap-1 text-foreground">
             <Loader2 className="h-3 w-3 animate-spin" /> loading
           </span>
         )}
         {s.status === "error" && (
-          <span className="inline-flex items-center gap-1 text-destructive">
+          <span role="alert" className="inline-flex items-center gap-1 text-destructive">
             <AlertTriangle className="h-3 w-3" /> {s.error}
           </span>
         )}
-        {ds?.truncated && <span className="text-[var(--amber)]">truncated</span>}
-        <button onClick={() => setCfg(!cfg)} className="ml-auto rounded border border-border px-2 py-0.5 text-foreground hover:bg-muted">
+        {ds && <span>{ds.truncated ? "INCOMPLETE RECORDS · lower bounds" : "No application truncation"}</span>}
+        {ds && ds.missingDates.length > 0 && <span className="text-[var(--amber)]">{ds.missingDates.length} unavailable date(s) · totals incomplete</span>}
+        <Button variant="ghost" onClick={() => setCfg(!cfg)} className="ml-auto rounded border border-border px-2 py-0.5 text-foreground hover:bg-muted">
           Data source
-        </button>
+        </Button>
       </div>
+      {ds && ds.notes.length > 0 && <div className="mx-auto max-w-[1600px] px-4 pb-2 text-xs text-muted-foreground">{ds.notes.join(" ")}</div>}
       {cfg && <DataSourcePanel onClose={() => setCfg(false)} />}
     </div>
   );
@@ -121,16 +125,16 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
   return (
     <div className="mx-auto grid max-w-[1600px] gap-3 border-t border-border px-4 py-3 text-sm md:grid-cols-[auto_1fr]">
       <div className="flex gap-1">
-        <button onClick={() => s.set({ mode: "demo" })} className={cn("rounded-md px-3 py-1.5", s.mode === "demo" ? "bg-[var(--amber)] text-background" : "border border-border")}>
+        <Button variant="ghost" onClick={() => s.set({ mode: "demo" })} className={cn("rounded-md px-3 py-1.5", s.mode === "demo" ? "bg-[var(--amber)] text-background" : "border border-border")}>
           Demo
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost"
           disabled={!s.liveConfigured}
           onClick={() => s.set({ mode: "live", live: { ...draft } })}
           className={cn("rounded-md px-3 py-1.5 disabled:opacity-40", s.mode === "live" ? "bg-[var(--live)] text-background" : "border border-border")}
         >
           Live FIRMS
-        </button>
+        </Button>
       </div>
       {s.liveConfigured === false ? (
         <p className="text-muted-foreground">
@@ -166,7 +170,7 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
             Days (1–10)
             <input type="number" min={1} max={10} className={cn(sel, "w-20")} value={draft.days} onChange={(e) => setDraft({ ...draft, days: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} />
           </label>
-          <button
+          <Button variant="ghost"
             onClick={() => {
               s.set({ mode: "live", live: { ...draft } });
               onClose();
@@ -174,9 +178,9 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
             className="rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground"
           >
             Load observations
-          </button>
+          </Button>
           <p className="w-full text-xs text-muted-foreground">
-            Requests are limited to 10 days and 20,000 detections. Use Standard (SP) products for older archive dates. Short live ranges cannot support historical baselines.
+            Requests retrieve complete daily responses for up to 10 days; no 20,000-record sampling cap. Use Standard (SP) products for older archive dates. Short live ranges cannot support historical baselines.
           </p>
         </div>
       )}

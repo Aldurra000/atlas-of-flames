@@ -1,9 +1,8 @@
 import { Info } from "lucide-react";
 import { useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useFire, useWindowData } from "@/lib/fire/store";
+import { useFire, useWindowData, useFilteredData, analyticsAvailability } from "@/lib/fire/store";
 import { computeAnomaly } from "@/lib/fire/analytics";
-import { fmtDate } from "@/lib/fire/dates";
 
 export function Metric({ label, value, sub, tip }: { label: string; value: React.ReactNode; sub?: React.ReactNode; tip: string }) {
   return (
@@ -24,23 +23,24 @@ export function Metric({ label, value, sub, tip }: { label: string; value: React
 }
 
 export function useAnomalyFlags() {
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const cfg = useFire((s) => s.anomaly);
+  const country = useFire((s) => s.country);
   return useMemo(() => {
     if (!data || !date) return null;
     const rows = [...data.idx.entries()]
-      .filter(([k]) => k !== "__ALL__" && k !== "Unassigned")
-      .map(([country, daily]) => ({ country, a: computeAnomaly(daily, data.available, date, W, cfg) }));
-    const insufficient = rows.length > 0 && rows.every((r) => r.a.status === "insufficient");
+      .filter(([k]) => k !== "__ALL__" && k !== "Unassigned" && (!country || k === country))
+      .map(([country, daily]) => ({ country, a: computeAnomaly(daily, analyticsAvailability(data), date, W, cfg) }));
+    const insufficient = rows.length === 0 || rows.every((r) => r.a.status === "insufficient");
     return { rows, flagged: rows.filter((r) => r.a.status === "elevated" || r.a.status === "strong"), insufficient };
-  }, [data, date, W, cfg]);
+  }, [data, date, W, cfg, country]);
 }
 
 export function MetricsBar() {
   const win = useWindowData();
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const country = useFire((s) => s.country);
   const flags = useAnomalyFlags();
   if (!win || !data) return <div className="h-20 animate-pulse rounded-lg bg-card" />;
@@ -51,8 +51,8 @@ export function MetricsBar() {
     <div className="grid grid-cols-2 gap-4 rounded-lg border border-border bg-card p-4 lg:grid-cols-5">
       <Metric
         label="Detections"
-        value={win.records.length.toLocaleString()}
-        sub={country ?? "All regions · filtered"}
+        value={win.avail.length ? `${data.ds.truncated || win.missing.length ? "≥ " : ""}${win.records.length.toLocaleString()}` : "Unavailable"}
+        sub={`${country ?? "All regions"} · filtered loaded records`}
         tip="Number of satellite active-fire detections (pixels) in the selected window that pass the current filters. One fire can produce many detections; this is not a count of unique fires."
       />
       <Metric
@@ -74,9 +74,9 @@ export function MetricsBar() {
         tip="Regions whose detection count in the window exceeds the trailing historical baseline by the configured z-score threshold (see Methodology). Requires enough preceding data with adequate coverage."
       />
       <Metric
-        label="Coverage"
-        value={`${Math.round(win.coverage * 100)}%`}
-        sub={`latest ${fmtDate(data.ds.dates[data.ds.dates.length - 1]!)}`}
+        label="Retrieved days"
+        value={`${win.avail.length} / ${win.dates.length}`}
+        sub="Not satellite / geographic coverage"
         tip="Share of days in the selected window with observations available. Days with no data retrieved are 'missing', which is different from days with zero detections."
       />
     </div>
@@ -84,7 +84,7 @@ export function MetricsBar() {
 }
 
 export function Ranking({ limit = 8 }: { limit?: number }) {
-  const win = useWindowData({ ignoreCountry: true });
+  const win = useWindowData();
   const country = useFire((s) => s.country);
   const set = useFire((s) => s.set);
   if (!win) return null;
@@ -93,8 +93,8 @@ export function Ranking({ limit = 8 }: { limit?: number }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <h3 className="text-sm font-semibold">Activity ranking</h3>
-      <p className="mb-3 text-xs text-muted-foreground">Detections in window — not unique fires.</p>
-      {rows.length === 0 && <p className="text-sm text-muted-foreground">No detections in this window.</p>}
+      <p className="mb-3 text-xs text-muted-foreground">Filtered loaded detections in window — not unique fires.</p>
+      {rows.length === 0 && <p className="text-sm text-muted-foreground">{win.avail.length ? "No matching detections on retrieved days." : "Observations unavailable in this window."}</p>}
       <ol className="space-y-1.5">
         {rows.map(([c, n], i) => (
           <li key={c}>

@@ -40,6 +40,8 @@ export function DataLoader() {
           source: live.source,
           region: live.region,
           records: r.records,
+          returnedRecordCount: r.returnedRecordCount,
+          dailyCounts: r.dailyCounts,
           dates: r.dates,
           missingDates: r.missingDates,
           fetchedAt: r.fetchedAt,

@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/methodology")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Methodology — FIRECHRONICLE" },
       { name: "description", content: "How FIRECHRONICLE normalizes NASA FIRMS data, aggregates, builds baselines and flags anomalies." },
       { property: "og:title", content: "Methodology — FIRECHRONICLE" },
@@ -24,7 +26,7 @@ function Methodology() {
     <article className="mx-auto max-w-3xl">
       <h1 className="text-2xl font-bold">Methodology & Data Transparency</h1>
       <S t="Data source">
-        <p>NASA FIRMS active-fire products (MODIS 1 km, VIIRS 375 m; NRT and Standard), retrieved through a server-side proxy using the FIRMS area API. The key is held server-side only. Requests are limited to 10 days and 20,000 detections. Demo mode uses synthetic records generated in the browser and is always labeled.</p>
+        <p>NASA FIRMS active-fire products (MODIS 1 km, VIIRS 375 m; NRT and Standard), retrieved through a server-side proxy using the FIRMS area API. The key is held server-side only. Requests retrieve each complete daily CSV for up to 10 days without the former 20,000-row sampling cap. NASA rows returned and validated records loaded are reported separately. Failed dates and malformed rows make totals incomplete; these are not complete global fire totals. Demo mode uses synthetic records generated in the browser and is always labeled.</p>
       </S>
       <S t="Detections vs fires vs burned area">
         <p>A detection is one satellite pixel flagged as containing at least one thermal anomaly during an overpass. One fire can produce many detections across pixels and overpasses; detection counts are not unique fire counts. Burned area requires different products (e.g. MCD64A1) which are not integrated.</p>
@@ -36,13 +38,13 @@ function Methodology() {
         <p>Detections are binned into a regular lat/lon grid whose size depends on zoom (e.g. 2°, 0.5°, individual). Flame, column and heat symbols encode detection counts only — their size, color and motion are not physical fire measurements.</p>
       </S>
       <S t="Baselines & anomalies">
-        <p>For a region and window of W days, the observed count is compared with the K = 8 preceding non-overlapping W-day windows. Windows with less than 80% of days available are excluded; partial windows are scaled. At least 4 valid baseline windows are required, otherwise the result is "Insufficient historical data". z = (observed − mean) / max(std, √mean, 1). A window is flagged elevated at z ≥ 2 and strong at z ≥ 3, with at least 10 detections. Thresholds are configurable in Historical Analysis. This trailing baseline does not model multi-year seasonality; a seasonal ramp-up can be flagged.</p>
+        <p>For a region and window of W days, the observed count is compared with the K = 8 preceding non-overlapping W-day windows. Windows with less than 80% of days available are excluded; partial windows are scaled. At least 28 preceding observed days and 4 valid baseline windows are required, otherwise the result is "Insufficient historical data". z = (observed − mean) / max(std, √mean, 1). A window is flagged elevated at z ≥ 2 and strong at z ≥ 3, with at least 10 detections. Thresholds are configurable in Historical Analysis. This trailing baseline does not model multi-year seasonality; a seasonal ramp-up can be flagged.</p>
       </S>
       <S t="Monitoring priorities">
         <p>score = 0.4·R + 0.3·P + 0.3·A (recent activity, persistence, anomaly). This is a monitoring aid, not a forecast. No weather, drought, vegetation or official-warning data is integrated.</p>
       </S>
       <S t="Coverage & limitations">
-        <p>Days with no observations retrieved are shown as missing, distinct from zero detections. Clouds, overpass timing, smoke and sensor saturation affect detection. NRT data may be incomplete for the latest day. Short live ranges cannot support baselines.</p>
+        <p>Retrieved-day availability counts successful date responses divided by requested days; it is not geographic or satellite coverage. Annual profiles require at least 365 retrieved days and still do not establish multi-year seasonality. Days with no observations retrieved are shown as missing, distinct from zero detections. Clouds, overpass timing, smoke and sensor saturation affect detection. NRT data may be incomplete for the latest day. Short live ranges cannot support baselines.</p>
       </S>
     </article>
   );

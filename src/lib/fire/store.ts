@@ -39,7 +39,7 @@ interface FireState {
 }
 
 export const useFire = create<FireState>((set) => ({
-  mode: "demo",
+  mode: "live",
   liveConfigured: null,
   live: { source: "VIIRS_SNPP_NRT", region: "world", endDate: null, days: 1 },
   status: "idle",
@@ -57,7 +57,13 @@ export const useFire = create<FireState>((set) => ({
   autoRotate: true,
   zoomBucket: "far",
   anomaly: DEFAULT_ANOMALY,
-  set: (p) => set(p),
+  set: (p) => set((s) => ({
+    ...p,
+    ...(p.mode && p.mode !== s.mode || p.live && p.live !== s.live
+      ? { data: null, selection: null, playing: false, status: "loading" as const, error: null }
+      : p.country !== undefined || p.filters || p.selectedDate || p.windowDays
+        ? { selection: null } : {}),
+  })),
   setDataset: (ds) => {
     const missing = new Set(ds.missingDates);
     const data: Prepared = {
@@ -115,3 +121,18 @@ export function useWindowData(opts: { ignoreCountry?: boolean } = {}) {
 }
 
 export const scopeKey = (country: string | null) => country ?? ALL;
+
+/** Attribute filters also apply to historical counts; country scoping is applied by each view. */
+export function useFilteredData() {
+  const data = useFire((s) => s.data);
+  const filters = useFire((s) => s.filters);
+  return useMemo(() => {
+    if (!data) return null;
+    const records = data.ds.records.filter((r) => passesFilters(r, filters));
+    return { ...data, idx: buildDailyIndex(records), byDate: groupByDate(records) };
+  }, [data, filters]);
+}
+
+export function analyticsAvailability(data: Prepared) {
+  return data.ds.truncated ? new Set<string>() : data.available;
+}

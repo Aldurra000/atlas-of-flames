@@ -4,13 +4,15 @@ import { geoMercator, geoPath } from "d3-geo";
 import { CountrySelect } from "@/components/fire/CountrySelect";
 import { ActivityChart } from "@/components/fire/Charts";
 import { Timeline } from "@/components/fire/Timeline";
-import { useFire, useWindowData } from "@/lib/fire/store";
+import { useFire, useWindowData, useFilteredData, analyticsAvailability } from "@/lib/fire/store";
 import { computeAnomaly } from "@/lib/fire/analytics";
 import { countryFeature } from "@/lib/fire/geo";
 
 export const Route = createFileRoute("/country")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Country Intelligence — FIRECHRONICLE" },
       { name: "description", content: "Per-country active-fire detections, seasonality, baseline anomalies and data coverage." },
       { property: "og:title", content: "Country Intelligence — FIRECHRONICLE" },
@@ -36,7 +38,7 @@ const GLOBAL = [
 
 function CountryPage() {
   const country = useFire((s) => s.country);
-  const data = useFire((s) => s.data);
+  const data = useFilteredData();
   const date = useFire((s) => s.selectedDate);
   const W = useFire((s) => s.windowDays);
   const cfg = useFire((s) => s.anomaly);
@@ -48,7 +50,7 @@ function CountryPage() {
     const proj = geoMercator().fitSize([600, 380], f);
     return { d: geoPath(proj)(f) ?? "", pts: win.records.slice(0, 5000).map((r) => ({ r, p: proj([r.lon, r.lat]) })) };
   }, [country, win]);
-  const anomaly = country && data && date ? computeAnomaly(data.idx.get(country), data.available, date, W, cfg) : null;
+  const anomaly = country && data && date ? computeAnomaly(data.idx.get(country), analyticsAvailability(data), date, W, cfg) : null;
   const products = [...new Set(win?.records.map((r) => `${r.instrument} ${r.satellite ?? ""}`) ?? [])];
   return (
     <div className="space-y-4">
@@ -69,19 +71,20 @@ function CountryPage() {
                 {map.pts.map(({ r, p }) => p && <circle key={r.id} cx={p[0]} cy={p[1]} r={2} fill="var(--fire)" opacity={0.75} className="cursor-pointer" onClick={() => set({ selection: { type: "detection", detection: r } })} />)}
               </svg>
             ) : <p className="text-sm text-muted-foreground">Boundary unavailable.</p>}
-            {win && !win.records.length && <p className="text-sm text-muted-foreground">No detections in this window (or data unavailable for this country).</p>}
+            {win && !win.records.length && <p className="text-sm text-muted-foreground">{win.avail.length ? "No matching detections on retrieved days within the requested region; this is not evidence of no fires." : "Observations unavailable in this window."}</p>}
           </section>
           <section className="space-y-4">
             <div className="rounded-lg border border-border bg-card p-4">
               <h2 className="text-sm font-semibold">Daily activity</h2>
               <ActivityChart scope={country} gran="daily" height={150} />
               <h2 className="mt-3 text-sm font-semibold">Seasonal profile (mean / observed day)</h2>
+              {map && <p className="text-xs text-muted-foreground">Map symbols: {map.pts.length.toLocaleString()} / {win?.records.length.toLocaleString()} loaded detections.</p>}
               <ActivityChart scope={country} gran="seasonal" height={130} />
             </div>
             <div className="rounded-lg border border-border bg-card p-4 text-sm">
               <h2 className="font-semibold">Baseline comparison</h2>
               <p className="mt-1 text-muted-foreground">{anomaly?.reason}</p>
-              <p className="mt-2 text-xs text-muted-foreground">Coverage {Math.round((win?.coverage ?? 0) * 100)}% · Products: {products.join(", ") || "—"}</p>
+              <p className="mt-2 text-xs text-muted-foreground">Retrieved days {win?.avail.length ?? 0} / {W} (not geographic coverage) · Products: {products.join(", ") || "—"}</p>
               <h2 className="mt-3 font-semibold">Official organizations</h2>
               <ul className="mt-1 space-y-1 text-xs">
                 {[...(AGENCIES[country] ?? []), ...GLOBAL].map((a) => (

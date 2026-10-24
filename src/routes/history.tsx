@@ -9,6 +9,8 @@ import { addDays, fmtDate } from "@/lib/fire/dates";
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Historical Analysis — FIRECHRONICLE" },
       { name: "description", content: "Daily, weekly, monthly and seasonal fire-detection trends with baseline anomaly detection." },
       { property: "og:title", content: "Historical Analysis — FIRECHRONICLE" },
@@ -62,14 +64,14 @@ function History() {
           </div>
           {flags?.insufficient ? (
             <p className="rounded border border-border p-3 text-sm text-muted-foreground">
-              Insufficient historical data. The loaded range does not contain {cfg.minValidWindows} prior {W}-day windows with ≥{cfg.minCoverage * 100}% coverage.
+              Insufficient historical data. The loaded range does not contain {cfg.minValidWindows} prior {W}-day windows with ≥{cfg.minCoverage * 100}% retrieved days and at least 28 preceding observed days; incomplete samples cannot establish a baseline.
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="text-left text-muted-foreground">
                   <tr>
-                    <th className="py-1">Country</th><th>Observed</th><th>Baseline</th><th>Δ</th><th>z</th><th>Cov.</th><th>Status</th>
+                    <th className="py-1">Country</th><th>Observed</th><th>Baseline</th><th>Δ</th><th>z</th><th>Days retrieved</th><th>Status</th>
                   </tr>
                 </thead>
                 <tbody className="font-mono">

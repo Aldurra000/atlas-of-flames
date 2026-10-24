@@ -7,6 +7,8 @@ import { useFire, useWindowData } from "@/lib/fire/store";
 export const Route = createFileRoute("/explorer")({
   head: () => ({
     meta: [
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Fire Explorer — FIRECHRONICLE" },
       { name: "description", content: "Filter and inspect individual satellite active-fire detections by date, confidence, FRP and day/night." },
       { property: "og:title", content: "Fire Explorer — FIRECHRONICLE" },
