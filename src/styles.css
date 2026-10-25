@@ -113,3 +113,8 @@
     font-family: var(--font-display);
   }
 }
+
+.archive-missing {
+  background: repeating-linear-gradient(45deg, var(--secondary) 0 2px, var(--muted-foreground) 2px 3px);
+  opacity: 0.5;
+}
