@@ -3,7 +3,7 @@ import { useState } from "react";
 import { AlertTriangle, Flame, Loader2, Menu, Satellite, X } from "lucide-react";
 import { useFire } from "@/lib/fire/store";
 import { LIVE_SOURCES, SOURCE_LABELS, type LiveSource } from "@/lib/fire/types";
-import { REGION_PRESETS } from "@/lib/fire/firms";
+import { REGION_PRESETS, resolveRegion } from "@/lib/fire/firms";
 import { fmtDate, todayUtc } from "@/lib/fire/dates";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,7 @@ function DataStatusBar() {
           <Satellite className="h-3 w-3" /> {s.mode === "demo" ? "DEMO MODE" : confirmed ? "LIVE NASA FIRMS" : s.status === "error" ? "LIVE UNAVAILABLE" : "AWAITING NASA FIRMS"}
         </span>
         <span>{ds ? SOURCE_LABELS[ds.source] : "—"}</span>
-        {ds && <span>{REGION_PRESETS[ds.region]?.label ?? ds.region}</span>}
+        {ds && <span>{resolveRegion(ds.region)?.label ?? ds.region}</span>}
         {ds && (
           <span>
             {fmtDate(ds.dates[0] ?? "")} → {fmtDate(ds.dates.at(-1) ?? "")}
@@ -160,8 +160,21 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
                   {v.label}
                 </option>
               ))}
+              {!REGION_PRESETS[draft.region] && <option value={draft.region}>{resolveRegion(draft.region)?.label ?? "Custom area"}</option>}
+              {REGION_PRESETS[draft.region] && <option value="bbox:-10,35,5,44">Custom bounding box…</option>}
             </select>
           </label>
+          {!REGION_PRESETS[draft.region] && (
+            <label className="grid gap-0.5 text-xs text-muted-foreground">
+              Custom area W,S,E,N (°)
+              <input
+                className={cn(sel, "w-48 font-mono", !resolveRegion(draft.region) && "border-destructive")}
+                defaultValue={draft.region.slice(5)}
+                onChange={(e) => setDraft({ ...draft, region: `bbox:${e.target.value.replace(/\s/g, "")}` })}
+                aria-label="Custom bounding box"
+              />
+            </label>
+          )}
           <label className="grid gap-0.5 text-xs text-muted-foreground">
             End date (UTC)
             <input type="date" className={sel} max={todayUtc()} value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} />
@@ -171,6 +184,7 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
             <input type="number" min={1} max={10} className={cn(sel, "w-20")} value={draft.days} onChange={(e) => setDraft({ ...draft, days: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} />
           </label>
           <Button variant="ghost"
+            disabled={!resolveRegion(draft.region)}
             onClick={() => {
               s.set({ mode: "live", live: { ...draft } });
               onClose();

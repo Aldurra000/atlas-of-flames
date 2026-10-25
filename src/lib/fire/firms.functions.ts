@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { LIVE_SOURCES } from "./types";
-import { parseFirmsCsv, redact, REGION_PRESETS } from "./firms";
+import { parseFirmsCsv, redact, resolveRegion } from "./firms";
 import { addDays, dateRange, todayUtc } from "./dates";
 
 export const getFirmsStatus = createServerFn({ method: "GET" }).handler(async () => {
@@ -10,7 +10,7 @@ export const getFirmsStatus = createServerFn({ method: "GET" }).handler(async ()
 
 const input = z.object({
   source: z.enum(LIVE_SOURCES),
-  region: z.string().refine((r) => r in REGION_PRESETS, "Unknown region"),
+  region: z.string().max(60).refine((r) => resolveRegion(r) !== null, "Unknown region"),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   days: z.number().int().min(1).max(10),
 });
@@ -24,7 +24,7 @@ export const fetchFirms = createServerFn({ method: "POST" })
     if (data.endDate < "2000-11-01") return { ok: false as const, error: "Date precedes the MODIS record." };
 
     const start = addDays(data.endDate, -(data.days - 1));
-    const region = REGION_PRESETS[data.region];
+    const region = resolveRegion(data.region);
     if (!region) return { ok: false as const, error: "Unknown region." };
     const area = region.area;
     // Retrieve each complete day; never select a highest-FRP sample for statistics.

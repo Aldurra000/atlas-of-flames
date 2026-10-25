@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { useMemo } from "react";
 import type { Cell, Dataset, Detection, LiveSource } from "./types";
+import type { ArchiveSensor, YearState } from "./archive";
 import { ALL, buildDailyIndex, DEFAULT_ANOMALY, groupByDate, windowDates, type AnomalyConfig } from "./analytics";
 
 export type Viz = "flames" | "columns" | "heat" | "clusters";
@@ -34,6 +35,9 @@ interface FireState {
   autoRotate: boolean;
   zoomBucket: ZoomBucket;
   anomaly: AnomalyConfig;
+  /** Long-term per-country NASA archive (independent of the live/demo dataset). */
+  archive: { country: string | null; years: Record<ArchiveSensor, Record<number, YearState>> };
+  setArchiveYear: (country: string, sensor: ArchiveSensor, year: number, st: YearState) => void;
   set: (p: Partial<FireState>) => void;
   setDataset: (ds: Dataset) => void;
 }
@@ -57,6 +61,12 @@ export const useFire = create<FireState>((set) => ({
   autoRotate: true,
   zoomBucket: "far",
   anomaly: DEFAULT_ANOMALY,
+  archive: { country: null, years: { modis: {}, "viirs-snpp": {} } },
+  setArchiveYear: (country, sensor, year, st) =>
+    set((s) => {
+      const base = s.archive.country === country ? s.archive.years : { modis: {}, "viirs-snpp": {} };
+      return { archive: { country, years: { ...base, [sensor]: { ...base[sensor], [year]: st } } } };
+    }),
   set: (p) => set((s) => ({
     ...p,
     ...(p.mode && p.mode !== s.mode || p.live && p.live !== s.live

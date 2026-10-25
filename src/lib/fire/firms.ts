@@ -81,3 +81,15 @@ export const REGION_PRESETS: Record<string, { label: string; area: string }> = {
   southeast_asia: { label: "Southeast Asia", area: "90,-11,155,28" },
   oceania: { label: "Australia & Oceania", area: "110,-50,180,0" },
 };
+
+const BBOX = /^bbox:(-?\d{1,3}(?:\.\d+)?),(-?\d{1,2}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?),(-?\d{1,2}(?:\.\d+)?)$/;
+/** Resolve a preset key or a custom "bbox:W,S,E,N" area of interest. Returns null when invalid. */
+export function resolveRegion(region: string): { label: string; area: string } | null {
+  const p = REGION_PRESETS[region];
+  if (p) return p;
+  const m = BBOX.exec(region);
+  if (!m) return null;
+  const [w, s, e, n] = m.slice(1).map(Number) as [number, number, number, number];
+  if (w < -180 || e > 180 || s < -90 || n > 90 || w >= e || s >= n) return null;
+  return { label: `Custom area ${w}°,${s}° → ${e}°,${n}°`, area: `${w},${s},${e},${n}` };
+}
