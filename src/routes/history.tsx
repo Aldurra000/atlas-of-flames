@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ActivityChart, CalendarMatrix, GranTabs, useElevatedPeriods, type Gran } from "@/components/fire/Charts";
 import { useAnomalyFlags } from "@/components/fire/Metrics";
+import { ArchivePanel } from "@/components/fire/ArchivePanel";
 import { Timeline } from "@/components/fire/Timeline";
 import { scopeKey, useFire } from "@/lib/fire/store";
 import { addDays, fmtDate } from "@/lib/fire/dates";
@@ -36,6 +37,11 @@ function History() {
         <h1 className="text-xl font-bold sm:text-2xl">Historical Analysis</h1>
         <p className="text-sm text-muted-foreground">Scope: {country ?? "All regions"} · window {W} day(s). Select a country in the search box or on the globe.</p>
       </div>
+      <section className="rounded-lg border border-border bg-card p-4">
+        <h2 className="text-sm font-semibold">Long-term burning activity calendar — {country ?? "select a country"}</h2>
+        <p className="mb-3 text-xs text-muted-foreground">Multi-year NASA FIRMS archive (MODIS since 2000, VIIRS S-NPP since 2012), loaded per country and year. Independent of the short live window below.</p>
+        <ArchivePanel />
+      </section>
       <Timeline />
       <section className="rounded-lg border border-border bg-card p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">

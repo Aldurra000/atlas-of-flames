@@ -17,7 +17,7 @@ import {
 } from "@/lib/fire/archive";
 import { countryFeature } from "@/lib/fire/geo";
 import { geoBounds } from "d3-geo";
-import { addDays, todayUtc } from "@/lib/fire/dates";
+import { todayUtc } from "@/lib/fire/dates";
 import { Seg } from "./Timeline";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +88,7 @@ export function ArchivePanel() {
     if (!f) return;
     const [[w, s], [e, n]] = geoBounds(f);
     const r = (v: number) => Math.round(v * 10) / 10;
-    const monthEnd = addDays(`${y}-${String(m + 2).padStart(2, "0")}-01`.replace(/-13-/, "-12-").replace(/^(\d+)-12-01$/, `${y}-12-31`), m === 11 ? 0 : -1);
+    const monthEnd = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
     const end = monthEnd > todayUtc() ? todayUtc() : monthEnd;
     set({
       mode: "live",

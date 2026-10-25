@@ -161,7 +161,7 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
                 </option>
               ))}
               {!REGION_PRESETS[draft.region] && <option value={draft.region}>{resolveRegion(draft.region)?.label ?? "Custom area"}</option>}
-              <option value="bbox:-10,35,5,44">Custom bounding box…</option>
+              {REGION_PRESETS[draft.region] && <option value="bbox:-10,35,5,44">Custom bounding box…</option>}
             </select>
           </label>
           {!REGION_PRESETS[draft.region] && (
