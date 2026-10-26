@@ -71,9 +71,19 @@ export function ArchivePanel() {
       while (jobs.length && run.current === id) {
         const j = jobs.shift()!;
         setYear(country, j.sn, j.y, { status: "loading" });
+        const ck = `fc-archive:v2:${j.sn}:${j.y}:${country}`;
+        try {
+          const hit = localStorage.getItem(ck);
+          if (hit) {
+            setYear(country, j.sn, j.y, { status: "ok", summary: JSON.parse(hit) });
+            continue;
+          }
+        } catch { /* cache unavailable */ }
         try {
           const r = await fetchYear({ data: { sensor: j.sn, year: j.y, country: firmsCountryName(country) } });
           setYear(country, j.sn, j.y, r.ok ? { status: "ok", summary: r.summary } : { status: r.status, message: r.message });
+          // Cache only validated complete years (archived years are final).
+          if (r.ok) try { localStorage.setItem(ck, JSON.stringify(r.summary)); } catch { /* quota */ }
         } catch {
           setYear(country, j.sn, j.y, { status: "error", message: "Archive proxy unreachable." });
         }
@@ -97,10 +107,15 @@ export function ArchivePanel() {
   };
 
   const st = years[sensor];
-  const counts = { ok: 0, unavailable: 0, error: 0, loading: 0 };
+  const counts = { ok: 0, unavailable: 0, error: 0, loading: 0, invalid: 0, usable: 0, rows: 0 };
   for (const y of allYears) {
     const s = st[y]?.status;
-    if (s === "ok") counts.ok++;
+    if (s === "ok") {
+      counts.ok++;
+      const rows = (st[y] as { summary: { rows: number } }).summary.rows;
+      counts.rows += rows;
+      if (rows > 0) counts.usable++;
+    } else if (s === "invalid") counts.invalid++;
     else if (s === "unavailable") counts.unavailable++;
     else if (s === "error") counts.error++;
     else if (s === "loading" || s === "pending") counts.loading++;
@@ -127,7 +142,7 @@ export function ArchivePanel() {
           {busy ? `Loading NASA archive… (${counts.loading} years left)` : counts.ok ? "Reload missing years" : `Load ${country} archive (MODIS + VIIRS)`}
         </button>
         <span className="font-mono text-[11px] text-muted-foreground" data-testid="archive-status">
-          {ARCHIVE_SENSORS[sensor].short}: {counts.ok}/{allYears.length} years retrieved · {counts.unavailable} unavailable · {counts.error} failed
+          {ARCHIVE_SENSORS[sensor].short}: {allYears.length} years listed · {counts.ok + counts.invalid} downloaded · {counts.ok} validated · {counts.usable} usable for statistics · {counts.unavailable} no archive file · {counts.invalid} rejected · {counts.error} failed · {counts.rows.toLocaleString()} validated rows
         </span>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -184,7 +199,7 @@ export function ArchivePanel() {
         <div className="mt-2 flex flex-wrap gap-4 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-muted" /> zero in retrieved archive</span>
           <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm bg-[var(--fire)]" /> higher (log scale)</span>
-          <span className="flex items-center gap-1"><span className="archive-missing h-2.5 w-2.5 rounded-sm" /> year not retrieved / unavailable</span>
+          <span className="flex items-center gap-1"><span className="archive-missing h-2.5 w-2.5 rounded-sm" /> year not retrieved / unavailable / rejected (never shown as zero)</span>
         </div>
       </div>
 
