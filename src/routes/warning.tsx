@@ -7,6 +7,7 @@ import { fmtDate } from "@/lib/fire/dates";
 import { windowDates } from "@/lib/fire/analytics";
 import { Timeline } from "@/components/fire/Timeline";
 import { cn } from "@/lib/utils";
+import { AlertCenter, EmergencyContacts } from "@/components/fire/AlertCenter";
 
 export const Route = createFileRoute("/warning")({
   head: () => ({
@@ -66,6 +67,9 @@ function Warning() {
           No agency feed is connected. Consult national services, GWIS (gwis.jrc.ec.europa.eu) or EFFIS (effis.jrc.ec.europa.eu).
         </Cat>
       </div>
+
+      <AlertCenter />
+      <EmergencyContacts initial={country} />
 
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="text-sm font-semibold">Monitoring priorities {country ? `— ${country}` : ""}</h2>

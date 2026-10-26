@@ -3,3 +3,6 @@
 - [x] Harmonized metric, same-month anomaly flags, recurring peak months, cross-sensor ratio
 - [x] Custom bounding-box area for live requests
 - [x] Methodology update and tests
+- [x] Fire Alert Center, banner, preferences, browser notifications (opt-in)
+- [x] Oman emergency directory (verified source + date)
+- [x] Archive validation ladder, retries, mislabel/corruption checks, browser cache
