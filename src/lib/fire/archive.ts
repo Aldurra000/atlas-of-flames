@@ -121,7 +121,7 @@ export function yearLadder(st: YearState | undefined) {
     exists: s === "ok" || s === "invalid" ? true : s === "unavailable" ? false : null,
     downloaded: s === "ok" || s === "invalid",
     validated: s === "ok",
-    usable: s === "ok" && st.summary.rows > 0,
+    usable: st?.status === "ok" && st.summary.rows > 0,
   };
 }
 

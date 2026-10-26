@@ -51,8 +51,8 @@ describe("alerts", () => {
 
 describe("emergency directory", () => {
   it("lists only Oman's verified number with source and date", () => {
-    expect(EMERGENCY_DIRECTORY.Oman!.numbers[0]!.number).toBe("9999");
-    expect(EMERGENCY_DIRECTORY.Oman!.source.url).toMatch(/^https:\/\/gov\.om\//);
+    expect(EMERGENCY_DIRECTORY["Oman"]!.numbers[0]!.number).toBe("9999");
+    expect(EMERGENCY_DIRECTORY["Oman"]!.source.url).toMatch(/^https:\/\/gov\.om\//);
     expect(emergencyFor("Greece")).toBeNull();
   });
 });
