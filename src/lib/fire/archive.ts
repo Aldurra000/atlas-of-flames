@@ -46,6 +46,8 @@ export interface YearSummary {
   days: Record<string, DayAgg>;
   rows: number;
   malformed: number;
+  /** rows whose acq_date falls outside the requested year (mislabelled file guard) */
+  wrongYear?: number;
 }
 
 export function isConfident(conf: string) {
@@ -55,7 +57,7 @@ export function isConfident(conf: string) {
   return v !== "" && Number.isFinite(n) && n >= 30;
 }
 
-export function summarizeArchiveCsv(text: string): YearSummary {
+export function summarizeArchiveCsv(text: string, expectYear?: number): YearSummary {
   const lines = text.split(/\r?\n/);
   const header = (lines[0] ?? "").split(",").map((h) => h.trim());
   const iLat = header.indexOf("latitude"), iLon = header.indexOf("longitude"), iDate = header.indexOf("acq_date");
@@ -63,7 +65,7 @@ export function summarizeArchiveCsv(text: string): YearSummary {
   if (iLat < 0 || iLon < 0 || iDate < 0) throw new Error("Unexpected FIRMS archive format");
   const days: Record<string, DayAgg> = {};
   const cells = new Map<string, Set<string>>();
-  let rows = 0, malformed = 0;
+  let rows = 0, malformed = 0, wrongYear = 0;
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
@@ -71,6 +73,10 @@ export function summarizeArchiveCsv(text: string): YearSummary {
     const lat = Number(c[iLat]), lon = Number(c[iLon]), d = c[iDate] ?? "";
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !/^\d{4}-\d{2}-\d{2}$/.test(d)) {
       malformed++;
+      continue;
+    }
+    if (expectYear != null && Number(d.slice(0, 4)) !== expectYear) {
+      wrongYear++;
       continue;
     }
     rows++;
@@ -85,7 +91,7 @@ export function summarizeArchiveCsv(text: string): YearSummary {
     }
   }
   for (const [d, s] of cells) days[d]![2] = s.size;
-  return { days, rows, malformed };
+  return { days, rows, malformed, wrongYear };
 }
 
 export type Metric = 0 | 1 | 2;
@@ -98,7 +104,26 @@ export const METRIC_LABELS: Record<Metric, string> = {
 export type YearState =
   | { status: "loading" | "pending" }
   | { status: "ok"; summary: YearSummary }
-  | { status: "unavailable" | "error"; message: string };
+  | { status: "unavailable" | "error" | "invalid"; message: string };
+
+/** Validation of a summarized year: rejects mislabelled files and files that are mostly malformed. */
+export function validateYear(s: YearSummary): { ok: true } | { ok: false; message: string } {
+  const total = s.rows + s.malformed + (s.wrongYear ?? 0);
+  if ((s.wrongYear ?? 0) > 0.05 * Math.max(1, total)) return { ok: false, message: `${s.wrongYear} rows dated outside the requested year — file appears mislabelled.` };
+  if (s.malformed > 0.05 * Math.max(1, total)) return { ok: false, message: `${s.malformed} of ${total} rows malformed — file treated as corrupt.` };
+  return { ok: true };
+}
+
+/** Coverage ladder for the interface: listed → archive exists → downloaded → validated → usable for statistics. */
+export function yearLadder(st: YearState | undefined) {
+  const s = st?.status;
+  return {
+    exists: s === "ok" || s === "invalid" ? true : s === "unavailable" ? false : null,
+    downloaded: s === "ok" || s === "invalid",
+    validated: s === "ok",
+    usable: s === "ok" && st.summary.rows > 0,
+  };
+}
 
 /** year → month(0-11) → metric total, only for retrieved years. */
 export function monthlyMatrix(years: Record<number, YearState>, metric: Metric) {
