@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { GlobePanel } from "@/components/fire/GlobePanel";
 import { Timeline } from "@/components/fire/Timeline";
+import { AlertBanner } from "@/components/fire/AlertCenter";
 import { MetricsBar, Ranking, useAnomalyFlags } from "@/components/fire/Metrics";
 
 export const Route = createFileRoute("/")({
@@ -30,6 +31,7 @@ function Overview() {
       <MetricsBar />
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
+          <AlertBanner />
           <GlobePanel className="h-[58vh] min-h-[380px]" />
           <Timeline />
         </div>
