@@ -164,7 +164,7 @@ function AlertBody({ a }: { a: FireAlert }) {
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <dt className="text-muted-foreground">Country</dt><dd>{a.country}</dd>
         <dt className="text-muted-foreground">Cell centroid</dt><dd className="font-mono">{a.lat.toFixed(3)}, {a.lon.toFixed(3)}</dd>
-        <dt className="text-muted-foreground">Cell bounds</dt><dd className="font-mono">{a.cell.lat0}–{a.cell.lat0 + a.cell.size}°, {a.cell.lon0}–{a.cell.lon0 + a.cell.size}°</dd>
+        <dt className="text-muted-foreground">Cell bounds</dt><dd className="font-mono">lat {a.cell.lat0} to {a.cell.lat0 + a.cell.size}°, lon {a.cell.lon0} to {a.cell.lon0 + a.cell.size}°</dd>
         <dt className="text-muted-foreground">Newest observation</dt><dd className="font-mono">{a.observedAt.replace("T", " ").slice(0, 16)} UTC</dd>
         <dt className="text-muted-foreground">Data age</dt><dd className="font-mono">{a.ageHours.toFixed(1)} h</dd>
         <dt className="text-muted-foreground">Product</dt><dd>NASA FIRMS {a.source}</dd>

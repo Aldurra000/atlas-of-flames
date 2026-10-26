@@ -21,3 +21,5 @@
 - Start in live mode and only label NASA as live after a successful dataset load; explicit demo selection never silently substitutes for failed live requests.
 - Long-term history comes from NASA FIRMS public yearly country archives via `src/lib/fire/archive.functions.ts`, summarized server-side to daily aggregates (files are too large to ship as rows); pure logic lives in `src/lib/fire/archive.ts` with `src/test/archive.test.ts`.
 - MODIS and VIIRS archive series are shown per sensor and never spliced; harmonization collapses detections onto a shared daily grid, and long-term trends use a single sensor for consistency.
+- Alert rules are pure functions in `src/lib/fire/alerts.ts` (tested in `src/test/alerts.test.ts`); CRITICAL is reserved for official feeds, so it is never generated while none are integrated.
+- Emergency contacts live in `src/lib/fire/emergency.ts`, independent of the satellite feed; each entry needs an official source URL and verification date — never guessed numbers.
