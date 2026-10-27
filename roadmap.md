@@ -1,4 +1,7 @@
 # Challenge requirements
+- [ ] Seven-day live default and timeline playback verification
+- [ ] Configurable automatic refresh, manual refresh, retained-data failure states
+- [ ] Live NASA, archive, failure, desktop/mobile checks and test report
 - [x] Multi-year country archive (MODIS 2000–2025, VIIRS S-NPP 2012–2025) with year × month and daily calendars
 - [x] Harmonized metric, same-month anomaly flags, recurring peak months, cross-sensor ratio
 - [x] Custom bounding-box area for live requests
