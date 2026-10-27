@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { AlertTriangle, Flame, Loader2, Menu, Satellite, X } from "lucide-react";
+import { AlertTriangle, Flame, Loader2, Menu, RefreshCw, Satellite, X } from "lucide-react";
 import { useFire } from "@/lib/fire/store";
 import { LIVE_SOURCES, SOURCE_LABELS, type LiveSource } from "@/lib/fire/types";
 import { REGION_PRESETS, resolveRegion } from "@/lib/fire/firms";
@@ -25,7 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       {mode === "demo" && (
         <div className="sticky top-0 z-50 bg-[var(--amber)] px-3 py-1 text-center font-mono text-[11px] font-bold uppercase tracking-widest text-background">
-          Demo data — not live NASA observations
+          SIMULATED DEMO DATA — NOT LIVE NASA OBSERVATIONS
         </div>
       )}
       <header className={cn("sticky z-40 border-b border-border bg-background/90 backdrop-blur", mode === "demo" ? "top-6" : "top-0")}>
@@ -85,7 +85,7 @@ function DataStatusBar() {
     <div className="border-t border-border/60 bg-card/60">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 font-mono text-[11px] text-muted-foreground">
         <span className={cn("inline-flex items-center gap-1 font-bold", confirmed ? "text-[var(--live)]" : "text-[var(--amber)]")}>
-          <Satellite className="h-3 w-3" /> {s.mode === "demo" ? "DEMO MODE" : confirmed ? "LIVE NASA FIRMS" : s.status === "error" ? "LIVE UNAVAILABLE" : "AWAITING NASA FIRMS"}
+          <Satellite className="h-3 w-3" /> {s.mode === "demo" ? "SIMULATED DEMO MODE" : s.refreshError ? "STALE NASA DATA" : confirmed ? "LIVE NASA FIRMS" : s.status === "error" ? "LIVE UNAVAILABLE" : "AWAITING NASA FIRMS"}
         </span>
         <span>{ds ? SOURCE_LABELS[ds.source] : "—"}</span>
         {ds && <span>{resolveRegion(ds.region)?.label ?? ds.region}</span>}
@@ -96,9 +96,9 @@ function DataStatusBar() {
         )}
         {ds && <span>last successful refresh {ds.fetchedAt.replace("T", " ").slice(0, 19)} UTC</span>}
         {ds && <span>{ds.records.length.toLocaleString()} loaded{ds.kind === "live" ? ` / ${(ds.returnedRecordCount ?? ds.records.length).toLocaleString()} NASA rows returned` : " synthetic records"}</span>}
-        {s.status === "loading" && (
+        {(s.status === "loading" || s.refreshing) && (
           <span className="inline-flex items-center gap-1 text-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> loading
+            <Loader2 className="h-3 w-3 animate-spin" /> {ds ? "refreshing" : "loading"}
           </span>
         )}
         {s.status === "error" && (
@@ -108,6 +108,8 @@ function DataStatusBar() {
         )}
         {ds && <span>{ds.truncated ? "INCOMPLETE RECORDS · lower bounds" : "No application truncation"}</span>}
         {ds && ds.missingDates.length > 0 && <span className="text-[var(--amber)]">{ds.missingDates.length} unavailable date(s) · totals incomplete</span>}
+        {s.refreshError && <span role="alert" className="inline-flex items-center gap-1 text-destructive"><AlertTriangle className="h-3 w-3" /> {s.refreshError}</span>}
+        {s.mode === "live" && <Button variant="ghost" size="sm" disabled={s.refreshing} onClick={s.requestRefresh}><RefreshCw className="h-3 w-3" /> Refresh Now</Button>}
         <Button variant="ghost" onClick={() => setCfg(!cfg)} className="ml-auto rounded border border-border px-2 py-0.5 text-foreground hover:bg-muted">
           Data source
         </Button>
@@ -183,6 +185,15 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
             Days (1–10)
             <input type="number" min={1} max={10} className={cn(sel, "w-20")} value={draft.days} onChange={(e) => setDraft({ ...draft, days: Math.max(1, Math.min(10, Number(e.target.value) || 1)) })} />
           </label>
+          <label className="grid gap-0.5 text-xs text-muted-foreground">
+            Auto refresh
+            <select className={sel} value={s.refreshMinutes} onChange={(e) => s.set({ refreshMinutes: Number(e.target.value) })}>
+              <option value={0}>Off</option>
+              <option value={15}>15 minutes</option>
+              <option value={30}>30 minutes</option>
+              <option value={60}>60 minutes</option>
+            </select>
+          </label>
           <Button variant="ghost"
             disabled={!resolveRegion(draft.region)}
             onClick={() => {
@@ -194,7 +205,7 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
             Load observations
           </Button>
           <p className="w-full text-xs text-muted-foreground">
-            Requests retrieve complete daily responses for up to 10 days; no 20,000-record sampling cap. Use Standard (SP) products for older archive dates. Short live ranges cannot support historical baselines.
+            Requests retrieve complete daily responses for up to 10 days; no 20,000-record sampling cap. Automatic refresh runs only while this app is open, subject to NASA limits. Use Standard (SP) products for older archive dates. Short live ranges cannot support historical baselines.
           </p>
         </div>
       )}
