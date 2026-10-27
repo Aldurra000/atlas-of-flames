@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { useFire, useFilteredData, scopeKey } from "@/lib/fire/store";
 import { windowDates } from "@/lib/fire/analytics";
 import { fmtDate } from "@/lib/fire/dates";
@@ -47,7 +48,7 @@ export function Timeline() {
           <CtlBtn label="Previous day" onClick={() => go(idx - 1)} disabled={idx <= 0}>
             <ChevronLeft className="h-4 w-4" />
           </CtlBtn>
-          <button
+          <Button variant="ghost" size="icon"
             aria-label={playing ? "Pause" : "Play"}
             onClick={() => {
               if (!playing && idx >= dates.length - 1) go(0);
@@ -56,7 +57,7 @@ export function Timeline() {
             className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[var(--shadow-fire)]"
           >
             {playing ? <Pause className="h-4 w-4" /> : <Play className="ml-0.5 h-4 w-4" />}
-          </button>
+          </Button>
           <CtlBtn label="Next day" onClick={() => go(idx + 1)} disabled={idx >= dates.length - 1}>
             <ChevronRight className="h-4 w-4" />
           </CtlBtn>
@@ -64,7 +65,7 @@ export function Timeline() {
         <div className="min-w-0">
           <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Selected window (UTC)</div>
           <div className="truncate text-sm font-semibold" data-testid="selected-date">
-            {W > 1 ? `${fmtDate(windowDates(date, W)[0]!)} → ` : ""}
+            {W > 1 ? `${fmtDate(windowDates(date, W)[0] ?? date)} → ` : ""}
             {fmtDate(date)}
             <span className="ml-2 font-normal text-muted-foreground">00:00–23:59</span>
           </div>
@@ -100,13 +101,13 @@ export function Timeline() {
             </g>
           ))}
         </svg>
-        <Slider className="mt-1" min={0} max={Math.max(0, dates.length - 1)} step={1} value={[idx]} onValueChange={([v]) => go(v!)} aria-label="Select date" />
+        <Slider className="mt-1" min={0} max={Math.max(0, dates.length - 1)} step={1} value={[idx]} onValueChange={([v]) => { if (v !== undefined) go(v); }} aria-label="Select date" />
         <div className="mt-1.5 flex justify-between font-mono text-[10px] text-muted-foreground">
-          <span>{fmtDate(dates[0]!)}</span>
+          <span>{fmtDate(dates[0] ?? date)}</span>
           <span className="hidden sm:inline">
             <span className="mr-1 inline-block h-2 w-2 bg-[var(--missing)]" /> no observations available
           </span>
-          <span>{fmtDate(dates[dates.length - 1]!)}</span>
+          <span>{fmtDate(dates[dates.length - 1] ?? date)}</span>
         </div>
       </div>
     </div>
@@ -115,9 +116,9 @@ export function Timeline() {
 
 function CtlBtn({ label, children, ...p }: { label: string; children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
-    <button aria-label={label} title={label} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30" {...p}>
+    <Button variant="ghost" size="icon" aria-label={label} title={label} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30" {...p}>
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -137,7 +138,7 @@ export function Seg<T extends string | number>({
       {label && <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>}
       <div className="flex rounded-md border border-border p-0.5">
         {options.map((o) => (
-          <button
+          <Button variant="ghost" size="sm"
             key={String(o.v)}
             disabled={o.disabled}
             onClick={() => onChange(o.v)}
@@ -147,7 +148,7 @@ export function Seg<T extends string | number>({
             )}
           >
             {o.l}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

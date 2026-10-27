@@ -22,6 +22,11 @@ interface FireState {
   live: { source: LiveSource; region: string; endDate: string | null; days: number };
   status: "idle" | "loading" | "ready" | "error";
   error: string | null;
+  refreshing: boolean;
+  refreshError: string | null;
+  refreshMinutes: number;
+  refreshNonce: number;
+  requestRefresh: () => void;
   data: Prepared | null;
   selectedDate: string | null;
   windowDays: number;
@@ -39,15 +44,20 @@ interface FireState {
   archive: { country: string | null; years: Record<ArchiveSensor, Record<number, YearState>> };
   setArchiveYear: (country: string, sensor: ArchiveSensor, year: number, st: YearState) => void;
   set: (p: Partial<FireState>) => void;
-  setDataset: (ds: Dataset) => void;
+  setDataset: (ds: Dataset, preserveSelection?: boolean) => void;
 }
 
 export const useFire = create<FireState>((set) => ({
   mode: "live",
   liveConfigured: null,
-  live: { source: "VIIRS_SNPP_NRT", region: "world", endDate: null, days: 1 },
+  live: { source: "VIIRS_SNPP_NRT", region: "world", endDate: null, days: 7 },
   status: "idle",
   error: null,
+  refreshing: false,
+  refreshError: null,
+  refreshMinutes: 30,
+  refreshNonce: 0,
+  requestRefresh: () => set((s) => s.refreshing ? {} : { refreshNonce: s.refreshNonce + 1 }),
   data: null,
   selectedDate: null,
   windowDays: 7,
@@ -70,11 +80,11 @@ export const useFire = create<FireState>((set) => ({
   set: (p) => set((s) => ({
     ...p,
     ...(p.mode && p.mode !== s.mode || p.live && p.live !== s.live
-      ? { data: null, selection: null, playing: false, status: "loading" as const, error: null }
+      ? { data: null, selection: null, playing: false, status: "loading" as const, error: null, refreshError: null }
       : p.country !== undefined || p.filters || p.selectedDate || p.windowDays
         ? { selection: null } : {}),
   })),
-  setDataset: (ds) => {
+  setDataset: (ds, preserveSelection = false) => {
     const missing = new Set(ds.missingDates);
     const data: Prepared = {
       ds,
@@ -88,10 +98,11 @@ export const useFire = create<FireState>((set) => ({
       data,
       status: "ready",
       error: null,
-      selectedDate: last,
-      windowDays: Math.min(s.windowDays, ds.dates.length >= 7 ? s.windowDays : 1),
+      refreshError: null,
+      selectedDate: preserveSelection && s.selectedDate && ds.dates.includes(s.selectedDate) ? s.selectedDate : last,
+      windowDays: s.windowDays <= ds.dates.length ? s.windowDays : ds.dates.length >= 7 ? 7 : 1,
       selection: null,
-      playing: false,
+      playing: preserveSelection ? s.playing : false,
     }));
   },
 }));
