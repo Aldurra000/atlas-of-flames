@@ -95,14 +95,14 @@ describe("Seven-day live loading and refresh", () => {
     expect(useFire.getState().selectedDate).toBe(addDays(todayUtc(), -1));
     act(() => view.getByRole("button", { name: "Next day" }).click());
     expect(useFire.getState().selectedDate).toBe(todayUtc());
-    act(() => view.getByRole("button", { name: "Play", exact: true }).click());
+    act(() => view.getByRole("button", { name: /^Play$/ }).click());
     expect(useFire.getState().selectedDate).toBe(addDays(todayUtc(), -6));
     act(() => vi.advanceTimersByTime(900));
     expect(useFire.getState().selectedDate).toBe(addDays(todayUtc(), -5));
-    act(() => view.getByRole("button", { name: "Pause", exact: true }).click());
+    act(() => view.getByRole("button", { name: /^Pause$/ }).click());
     act(() => vi.advanceTimersByTime(900));
     expect(useFire.getState().selectedDate).toBe(addDays(todayUtc(), -5));
-    act(() => view.getByRole("button", { name: "Play", exact: true }).click());
+    act(() => view.getByRole("button", { name: /^Play$/ }).click());
     act(() => vi.advanceTimersByTime(7 * 900));
     expect(useFire.getState().selectedDate).toBe(todayUtc());
     expect(useFire.getState().playing).toBe(false);

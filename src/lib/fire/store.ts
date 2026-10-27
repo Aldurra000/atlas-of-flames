@@ -100,7 +100,7 @@ export const useFire = create<FireState>((set) => ({
       error: null,
       refreshError: null,
       selectedDate: preserveSelection && s.selectedDate && ds.dates.includes(s.selectedDate) ? s.selectedDate : last,
-      windowDays: Math.min(s.windowDays, ds.dates.length >= 7 ? s.windowDays : 1),
+      windowDays: s.windowDays <= ds.dates.length ? s.windowDays : ds.dates.length >= 7 ? 7 : 1,
       selection: null,
       playing: preserveSelection ? s.playing : false,
     }));

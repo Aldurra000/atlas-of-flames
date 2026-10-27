@@ -123,6 +123,11 @@ function DataStatusBar() {
 function DataSourcePanel({ onClose }: { onClose: () => void }) {
   const s = useFire();
   const [draft, setDraft] = useState({ ...s.live, endDate: s.live.endDate ?? todayUtc() });
+  const [latest, setLatest] = useState(s.live.endDate === null);
+  const applyLive = () => {
+    if (!resolveRegion(draft.region) || !draft.endDate) return;
+    s.set({ mode: "live", live: { ...draft, endDate: latest ? null : draft.endDate } });
+  };
   const sel = "rounded-md border border-input bg-background px-2 py-1.5 text-sm";
   return (
     <div className="mx-auto grid max-w-[1600px] gap-3 border-t border-border px-4 py-3 text-sm md:grid-cols-[auto_1fr]">
@@ -131,8 +136,8 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
           Demo
         </Button>
         <Button variant="ghost"
-          disabled={!s.liveConfigured}
-          onClick={() => s.set({ mode: "live", live: { ...draft } })}
+          disabled={!s.liveConfigured || !resolveRegion(draft.region) || !draft.endDate}
+          onClick={applyLive}
           className={cn("rounded-md px-3 py-1.5 disabled:opacity-40", s.mode === "live" ? "bg-[var(--live)] text-background" : "border border-border")}
         >
           Live FIRMS
@@ -179,7 +184,8 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
           )}
           <label className="grid gap-0.5 text-xs text-muted-foreground">
             End date (UTC)
-            <input type="date" className={sel} max={todayUtc()} value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} />
+            <input type="date" className={sel} max={todayUtc()} disabled={latest} value={latest ? todayUtc() : draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} />
+            <span className="flex items-center gap-1"><input type="checkbox" checked={latest} onChange={(e) => setLatest(e.target.checked)} /> Latest UTC day</span>
           </label>
           <label className="grid gap-0.5 text-xs text-muted-foreground">
             Days (1–10)
@@ -195,9 +201,9 @@ function DataSourcePanel({ onClose }: { onClose: () => void }) {
             </select>
           </label>
           <Button variant="ghost"
-            disabled={!resolveRegion(draft.region)}
+            disabled={!resolveRegion(draft.region) || !draft.endDate}
             onClick={() => {
-              s.set({ mode: "live", live: { ...draft } });
+              applyLive();
               onClose();
             }}
             className="rounded-md bg-primary px-3 py-1.5 font-medium text-primary-foreground"
